@@ -25,9 +25,19 @@ You can enable one or both delivery methods in `config.yaml`.
 
 #### Discord Webhook
 
-1. Open your Discord server and go to **Server Settings → Integrations → Webhooks**
+**Create a server** (skip if you already have one):
+
+1. Open Discord (app or browser)
+2. Click the **+** button in the left sidebar
+3. Select **Create My Own** → **For me and my friends**
+4. Name it (e.g., "My Podcasts") and click **Create**
+5. Optionally create a dedicated channel (e.g., `#ai-briefing`) via the **+** next to "Text Channels"
+
+**Create the webhook:**
+
+1. Right-click your channel → **Edit Channel** → **Integrations** → **Webhooks**
 2. Click **New Webhook**
-3. Name it (e.g., "AI Podcast"), select the target channel, and click **Copy Webhook URL**
+3. Name it (e.g., "AI Podcast") and click **Copy Webhook URL**
 
 ### 3. Configure .env
 
