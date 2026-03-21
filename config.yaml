@@ -83,9 +83,9 @@ sources:
     max_stories: 3
 
   the_batch:
-    enabled: true
+    enabled: false  # No official RSS feed available
     type: "rss"
-    url: "https://www.deeplearning.ai/the-batch/feed/"
+    url: "https://www.deeplearning.ai/the-batch/rss/"
     max_stories: 3
 
   mit_tech_review_ai:
@@ -117,9 +117,9 @@ sources:
     max_stories: 2
 
   anthropic_news:
-    enabled: true
+    enabled: false  # No official RSS feed available
     type: "rss"
-    url: "https://www.anthropic.com/feed.xml"
+    url: "https://www.anthropic.com/rss.xml"
     max_stories: 2
 
   google_ai_blog:

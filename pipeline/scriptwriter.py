@@ -159,6 +159,16 @@ def _cleanup_for_tts(text: str) -> str:
     # Remove URLs from spoken text
     text = re.sub(r'https?://\S+', '', text)
 
+    # Replace Unicode arrows and special chars
+    text = text.replace("\u2192", " to ")
+    text = text.replace("\u2190", " from ")
+    text = text.replace("\u2014", ", ")
+    text = text.replace("\u2013", " to ")
+    text = text.replace("\u2018", "'")
+    text = text.replace("\u2019", "'")
+    text = text.replace("\u201c", '"')
+    text = text.replace("\u201d", '"')
+
     # Remove markdown
     text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
     text = re.sub(r'\*(.+?)\*', r'\1', text)

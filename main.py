@@ -7,6 +7,11 @@ import logging
 import os
 import sys
 
+# Fix Windows console encoding for Unicode
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 import yaml
 from dotenv import load_dotenv
 
