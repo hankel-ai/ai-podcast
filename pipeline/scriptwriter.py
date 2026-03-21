@@ -153,23 +153,43 @@ def _generate_ollama_script(stories: list[Story], config: dict) -> str:
         return _generate_template_script(stories, config)
 
 
-def _generate_ai_script(stories: list[Story], config: dict) -> str:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        logger.warning("ANTHROPIC_API_KEY not set, falling back to template mode")
-        return _generate_template_script(stories, config)
+def _get_anthropic_client():
+    """Return an Anthropic client, preferring Vertex AI if configured."""
+    import anthropic
 
+    vertex_project = os.environ.get("ANTHROPIC_VERTEX_PROJECT_ID")
+    if vertex_project:
+        region = os.environ.get("CLOUD_ML_REGION", "us-east5")
+        logger.info(f"Using Vertex AI (project={vertex_project}, region={region})")
+        return anthropic.AnthropicVertex(project_id=vertex_project, region=region), True
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if api_key:
+        logger.info("Using Anthropic API key")
+        return anthropic.Anthropic(api_key=api_key), False
+
+    return None, False
+
+
+def _generate_ai_script(stories: list[Story], config: dict) -> str:
     try:
-        import anthropic
+        import anthropic  # noqa: F401
     except ImportError:
         logger.warning("anthropic package not installed, falling back to template mode")
         return _generate_template_script(stories, config)
 
+    client, is_vertex = _get_anthropic_client()
+    if not client:
+        logger.warning("No Anthropic credentials found (set ANTHROPIC_VERTEX_PROJECT_ID or ANTHROPIC_API_KEY), falling back to template mode")
+        return _generate_template_script(stories, config)
+
+    # Vertex AI uses @ as version separator, Anthropic API uses -
+    model = "claude-haiku-4-5@20251001" if is_vertex else "claude-haiku-4-5-20251001"
+
     prompt = _build_prompt(stories, config)
 
-    client = anthropic.Anthropic(api_key=api_key)
     message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=model,
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}],
     )

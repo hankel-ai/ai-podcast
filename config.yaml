@@ -1,6 +1,6 @@
 podcast:
   title: "AI Daily Briefing"
-  max_stories: 12
+  max_stories: 15
   min_stories: 3
   script_mode: "ollama"  # "ollama" (local), "ai" (Claude Haiku), or "template" (no LLM)
   voice: "en-US-AndrewMultilingualNeural"
