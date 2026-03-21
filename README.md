@@ -1,6 +1,6 @@
 # AI Daily Briefing
 
-Automated daily AI news podcast generator. Scrapes top AI news from configurable sources, generates a podcast script (AI-powered or template-based), converts to audio with Edge TTS, and delivers via Telegram.
+Automated daily AI news podcast generator. Scrapes top AI news from configurable sources, generates a podcast script via local LLM (Ollama), cloud API (Claude), or templates, converts to audio with Edge TTS, and delivers via Telegram.
 
 ## Setup
 
@@ -27,12 +27,12 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 # Edit .env with your Telegram credentials
-# Optionally add ANTHROPIC_API_KEY for AI script mode
+# Optionally add ANTHROPIC_API_KEY for Claude script mode
 ```
 
-### 5. Configure sources
+### 5. Configure sources and options
 
-Edit `config.yaml` to enable/disable sources, adjust max stories, change voice, etc.
+Edit `config.yaml` to enable/disable sources, adjust max stories, change voice, switch script mode, etc.
 
 ## Usage
 
@@ -58,11 +58,80 @@ Run `schedule_task.cmd` (as Administrator) to register a Windows Task Scheduler 
 
 Set `podcast.script_mode` in `config.yaml`:
 
-- **`ai`**: Claude Haiku writes a natural podcast script (~$0.01/day). Requires `ANTHROPIC_API_KEY`.
-- **`template`**: Template-based script. Free, no API key needed.
+| Mode | Description | Requirements |
+|------|-------------|--------------|
+| **`ollama`** (default) | Local LLM generates a natural, conversational podcast script | Ollama running locally |
+| **`ai`** | Claude Haiku writes the script via Anthropic API (~$0.01/day) | `ANTHROPIC_API_KEY` in `.env` |
+| **`template`** | Template-based script with canned transitions. No LLM needed | None |
+
+All modes fall back to `template` automatically if the LLM is unavailable.
+
+### Ollama Configuration
+
+```yaml
+ollama:
+  url: "http://localhost:11434"
+  model: "llama3.1:8b"
+```
+
+Change `model` to any model you have pulled. List models with `ollama list`.
+
+## News Sources
+
+13 sources enabled by default, all configurable in `config.yaml`:
+
+| Source | Type | Notes |
+|--------|------|-------|
+| Hacker News | API | Keyword-filtered (AI/LLM/GPT/Claude/agentic/etc.), min score 50 |
+| Techmeme | HTML scrape | AI-related story clusters |
+| implicator.ai | HTML scrape | Curated AI news |
+| Ars Technica AI | RSS | |
+| MIT Technology Review AI | RSS | |
+| r/LocalLLaMA | Reddit JSON | Min score 100 |
+| r/MachineLearning | Reddit JSON | Min score 50 |
+| OpenAI Blog | RSS | |
+| Google AI Blog | RSS | |
+| Hugging Face Blog | RSS | |
+| Simon Willison's Blog | RSS | Agentic coding focus |
+| The Verge AI | RSS | |
+| Thomas Wiegold's Blog | RSS | Rarely updated |
+
+Each source has `enabled`, `max_stories`, and type-specific options. Set `podcast.max_stories` to control the total article count (default 12).
 
 ## Voice Options
 
 Change `podcast.voice` in `config.yaml`. Default: `en-US-AndrewMultilingualNeural`.
 
-Run `edge-tts --list-voices` for 400+ options. See `config.yaml` comments for recommended voices.
+| Voice | Description |
+|-------|-------------|
+| `en-US-AndrewMultilingualNeural` | Deep, authoritative male (default) |
+| `en-US-AriaNeural` | Warm, professional female |
+| `en-US-GuyNeural` | Classic male news reader |
+| `en-US-JennyNeural` | Friendly, clear female |
+| `en-US-BrianMultilingualNeural` | Confident male, slightly younger |
+| `en-US-EmmaMultilingualNeural` | Polished female, great diction |
+| `en-GB-RyanNeural` | British male, BBC-style |
+| `en-GB-SoniaNeural` | British female, polished |
+| `en-AU-WilliamNeural` | Australian male |
+| `en-IN-PrabhatNeural` | Indian English male |
+
+Run `edge-tts --list-voices` for 400+ options.
+
+## Delivery
+
+The podcast is delivered via Telegram Bot as two messages:
+1. **Audio file** — MP3 podcast ready to play
+2. **Story links** — Numbered list with titles, URLs, and source attribution
+
+## Project Structure
+
+```
+main.py              Entry point and CLI
+config.yaml          All configuration (sources, voice, LLM, schedule)
+.env                 Secrets (Telegram token, optional Anthropic key)
+sources/             News source fetchers (HN API, RSS, HTML scrapers, Reddit)
+pipeline/            Aggregation, script generation, audio generation
+delivery/            Telegram Bot API delivery
+utils/               Deduplication, logging
+output/              Generated MP3s and logs (gitignored)
+```
