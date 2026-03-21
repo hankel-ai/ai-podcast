@@ -1,0 +1,161 @@
+podcast:
+  title: "AI Daily Briefing"
+  max_stories: 12
+  min_stories: 3
+  script_mode: "template"  # "ai" (requires ANTHROPIC_API_KEY) or "template" (free)
+  voice: "en-US-AndrewMultilingualNeural"
+  voice_rate: "+5%"
+  output_dir: "./output"
+
+  # Available voices (all neural, high quality):
+  # en-US-AndrewMultilingualNeural  - Deep, authoritative male (default, best for news)
+  # en-US-AriaNeural                - Warm, professional female
+  # en-US-GuyNeural                 - Classic male news reader
+  # en-US-JennyNeural               - Friendly, clear female
+  # en-US-BrianMultilingualNeural   - Confident male, slightly younger
+  # en-US-EmmaMultilingualNeural    - Polished female, great diction
+  # en-GB-RyanNeural                - British male, BBC-style
+  # en-GB-SoniaNeural               - British female, polished
+  # en-AU-WilliamNeural             - Australian male
+  # en-IN-PrabhatNeural             - Indian English male
+  # Run: edge-tts --list-voices     for 400+ options
+
+sources:
+  hackernews:
+    enabled: true
+    type: "hackernews_api"
+    max_stories: 5
+    min_score: 50
+    keywords:
+      - "AI"
+      - "LLM"
+      - "GPT"
+      - "Claude"
+      - "Gemini"
+      - "machine learning"
+      - "neural"
+      - "transformer"
+      - "agentic"
+      - "coding agent"
+      - "model release"
+      - "open source model"
+      - "fine-tune"
+      - "RAG"
+      - "diffusion"
+      - "Anthropic"
+      - "OpenAI"
+      - "DeepMind"
+      - "Mistral"
+      - "Meta AI"
+      - "Llama"
+      - "deep learning"
+
+  techmeme:
+    enabled: true
+    type: "html_scraper"
+    url: "https://www.techmeme.com/"
+    max_stories: 4
+    keywords:
+      - "AI"
+      - "artificial intelligence"
+      - "LLM"
+      - "GPT"
+      - "Claude"
+      - "Gemini"
+      - "machine learning"
+      - "OpenAI"
+      - "Anthropic"
+      - "DeepMind"
+      - "model"
+      - "neural"
+      - "agentic"
+
+  implicator:
+    enabled: true
+    type: "html_scraper"
+    url: "https://implicator.ai"
+    max_stories: 4
+
+  ars_ai:
+    enabled: true
+    type: "rss"
+    url: "https://arstechnica.com/ai/feed/"
+    max_stories: 3
+
+  the_batch:
+    enabled: true
+    type: "rss"
+    url: "https://www.deeplearning.ai/the-batch/feed/"
+    max_stories: 3
+
+  mit_tech_review_ai:
+    enabled: true
+    type: "rss"
+    url: "https://www.technologyreview.com/topic/artificial-intelligence/feed"
+    max_stories: 2
+
+  reddit_localllama:
+    enabled: true
+    type: "reddit_json"
+    subreddit: "LocalLLaMA"
+    sort: "hot"
+    max_stories: 3
+    min_score: 100
+
+  reddit_machinelearning:
+    enabled: true
+    type: "reddit_json"
+    subreddit: "MachineLearning"
+    sort: "hot"
+    max_stories: 2
+    min_score: 50
+
+  openai_blog:
+    enabled: true
+    type: "rss"
+    url: "https://openai.com/blog/rss.xml"
+    max_stories: 2
+
+  anthropic_news:
+    enabled: true
+    type: "rss"
+    url: "https://www.anthropic.com/feed.xml"
+    max_stories: 2
+
+  google_ai_blog:
+    enabled: true
+    type: "rss"
+    url: "https://blog.google/technology/ai/rss/"
+    max_stories: 2
+
+  huggingface_blog:
+    enabled: true
+    type: "rss"
+    url: "https://huggingface.co/blog/feed.xml"
+    max_stories: 2
+
+  simon_willison:
+    enabled: true
+    type: "rss"
+    url: "https://simonwillison.net/atom/everything/"
+    max_stories: 2
+
+  the_verge_ai:
+    enabled: true
+    type: "rss"
+    url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+    max_stories: 2
+
+  thomas_wiegold:
+    enabled: true
+    type: "rss"
+    url: "https://thomas-wiegold.com/blog/feed/"
+    max_stories: 2
+
+telegram:
+  send_audio: true
+  send_links: true
+
+logging:
+  level: "INFO"
+  file: "./output/podcast.log"

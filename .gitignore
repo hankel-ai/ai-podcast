@@ -1,0 +1,6 @@
+.env
+output/*.mp3
+output/*.log
+__pycache__/
+*.pyc
+.venv/
