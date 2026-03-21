@@ -2,7 +2,7 @@ podcast:
   title: "AI Daily Briefing"
   max_stories: 12
   min_stories: 3
-  script_mode: "template"  # "ai" (requires ANTHROPIC_API_KEY) or "template" (free)
+  script_mode: "ollama"  # "ollama" (local), "ai" (Claude Haiku), or "template" (no LLM)
   voice: "en-US-AndrewMultilingualNeural"
   voice_rate: "+5%"
   output_dir: "./output"
@@ -19,6 +19,10 @@ podcast:
   # en-AU-WilliamNeural             - Australian male
   # en-IN-PrabhatNeural             - Indian English male
   # Run: edge-tts --list-voices     for 400+ options
+
+ollama:
+  url: "http://localhost:11434"
+  model: "llama3.1:8b"  # Available: llama3.1:8b, mistral, deepseek-coder:6.7b, minimax-m2.5:cloud
 
 sources:
   hackernews:

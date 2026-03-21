@@ -44,7 +44,9 @@ ACRONYMS = {
 def generate_script(stories: list[Story], config: dict) -> str:
     mode = config.get("podcast", {}).get("script_mode", "template")
 
-    if mode == "ai":
+    if mode == "ollama":
+        return _generate_ollama_script(stories, config)
+    elif mode == "ai":
         return _generate_ai_script(stories, config)
     else:
         return _generate_template_script(stories, config)
@@ -91,22 +93,10 @@ def _generate_template_script(stories: list[Story], config: dict) -> str:
     return _cleanup_for_tts(script)
 
 
-def _generate_ai_script(stories: list[Story], config: dict) -> str:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        logger.warning("ANTHROPIC_API_KEY not set, falling back to template mode")
-        return _generate_template_script(stories, config)
-
-    try:
-        import anthropic
-    except ImportError:
-        logger.warning("anthropic package not installed, falling back to template mode")
-        return _generate_template_script(stories, config)
-
+def _build_prompt(stories: list[Story], config: dict) -> str:
     title = config.get("podcast", {}).get("title", "AI Daily Briefing")
     date_str = datetime.now().strftime("%A, %B %d, %Y")
 
-    # Build story summaries for the prompt
     story_list = []
     for i, story in enumerate(stories, 1):
         entry = f"{i}. [{story.source_name}] {story.title}"
@@ -116,7 +106,7 @@ def _generate_ai_script(stories: list[Story], config: dict) -> str:
 
     stories_text = "\n\n".join(story_list)
 
-    prompt = f"""Write a podcast script for "{title}" dated {date_str}.
+    return f"""Write a podcast script for "{title}" dated {date_str}.
 
 Here are today's AI news stories:
 
@@ -133,6 +123,49 @@ Requirements:
 - Do NOT include any stage directions, speaker labels, or non-spoken text
 - Do NOT use markdown formatting
 - Output ONLY the spoken words"""
+
+
+def _generate_ollama_script(stories: list[Story], config: dict) -> str:
+    import httpx
+
+    ollama_config = config.get("ollama", {})
+    base_url = ollama_config.get("url", "http://localhost:11434")
+    model = ollama_config.get("model", "llama3")
+
+    prompt = _build_prompt(stories, config)
+
+    try:
+        resp = httpx.post(
+            f"{base_url}/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False},
+            timeout=300,
+        )
+        resp.raise_for_status()
+        script = resp.json().get("response", "")
+        if script.strip():
+            logger.info(f"Ollama script generated with model={model}")
+            return _cleanup_for_tts(script)
+        else:
+            logger.warning("Ollama returned empty response, falling back to template mode")
+            return _generate_template_script(stories, config)
+    except Exception as e:
+        logger.warning(f"Ollama failed ({e}), falling back to template mode")
+        return _generate_template_script(stories, config)
+
+
+def _generate_ai_script(stories: list[Story], config: dict) -> str:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        logger.warning("ANTHROPIC_API_KEY not set, falling back to template mode")
+        return _generate_template_script(stories, config)
+
+    try:
+        import anthropic
+    except ImportError:
+        logger.warning("anthropic package not installed, falling back to template mode")
+        return _generate_template_script(stories, config)
+
+    prompt = _build_prompt(stories, config)
 
     client = anthropic.Anthropic(api_key=api_key)
     message = client.messages.create(
