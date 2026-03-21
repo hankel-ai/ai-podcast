@@ -19,6 +19,7 @@ from pipeline.aggregator import aggregate_news
 from pipeline.scriptwriter import generate_script
 from pipeline.audio import generate_audio
 from delivery.telegram import send_podcast, send_failure_notification
+from delivery.discord import send_podcast_discord, send_failure_notification_discord
 from utils.logging_setup import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ async def run(args):
         if len(stories) < min_stories:
             msg = f"Only {len(stories)} stories found (minimum: {min_stories})"
             logger.warning(msg)
-            await send_failure_notification(msg)
+            await _notify_failure(msg, config)
             sys.exit(1)
 
         # 2. Generate script
@@ -89,17 +90,29 @@ async def run(args):
         audio_path = await generate_audio(script, config)
         logger.info(f"Audio generated: {audio_path}")
 
-        # 4. Deliver via Telegram
-        await send_podcast(audio_path, stories, config)
-        logger.info("Podcast delivered successfully!")
+        # 4. Deliver
+        if config.get("telegram", {}).get("enabled", True):
+            await send_podcast(audio_path, stories, config)
+            logger.info("Podcast delivered via Telegram")
+
+        if config.get("discord", {}).get("enabled", False):
+            await send_podcast_discord(audio_path, stories, config)
+            logger.info("Podcast delivered via Discord")
 
     except Exception as e:
         logger.exception(f"Pipeline failed: {e}")
         try:
-            await send_failure_notification(str(e))
+            await _notify_failure(str(e), config)
         except Exception:
             pass
         sys.exit(1)
+
+
+async def _notify_failure(message: str, config: dict):
+    if config.get("telegram", {}).get("enabled", True):
+        await send_failure_notification(message)
+    if config.get("discord", {}).get("enabled", False):
+        await send_failure_notification_discord(message)
 
 
 def main():

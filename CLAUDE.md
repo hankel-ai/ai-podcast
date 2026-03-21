@@ -1,7 +1,7 @@
 # ai-podcast
 
 ## Purpose
-Automated daily AI news podcast generator. Scrapes AI news, generates audio with Edge TTS, delivers via Telegram.
+Automated daily AI news podcast generator. Scrapes AI news, generates audio with Edge TTS, delivers via Telegram and/or Discord.
 
 ## Tech Stack
 - Python 3.10+
@@ -25,7 +25,7 @@ config.yaml          — All configuration (sources, voice, schedule)
 .env                 — Secrets (Telegram token, Anthropic key)
 sources/             — News source fetchers (HN API, RSS, HTML scrapers, Reddit)
 pipeline/            — Aggregation, script generation, audio generation
-delivery/            — Telegram bot delivery
+delivery/            — Telegram bot + Discord webhook delivery
 utils/               — Dedup, logging
 output/              — Generated MP3s and logs (gitignored)
 ```
@@ -35,7 +35,7 @@ output/              — Generated MP3s and logs (gitignored)
 2. Deduplicate: URL normalization + title similarity
 3. Script: AI mode (Claude Haiku) or template mode
 4. Audio: Edge TTS → MP3
-5. Deliver: Telegram Bot API (audio + links)
+5. Deliver: Telegram Bot API and/or Discord Webhook (audio + links)
 
 ## Conventions
 - All source fetchers are async, return list[Story]

@@ -1,6 +1,6 @@
 # AI Daily Briefing
 
-Automated daily AI news podcast generator. Scrapes top AI news from configurable sources, generates a podcast script via local LLM (Ollama), cloud API (Claude), or templates, converts to audio with Edge TTS, and delivers via Telegram.
+Automated daily AI news podcast generator. Scrapes top AI news from configurable sources, generates a podcast script via local LLM (Ollama), cloud API (Claude), or templates, converts to audio with Edge TTS, and delivers via Telegram and/or Discord.
 
 ## Setup
 
@@ -10,27 +10,43 @@ Automated daily AI news podcast generator. Scrapes top AI news from configurable
 pip install -r requirements.txt
 ```
 
-### 2. Create Telegram Bot
+### 2. Set up delivery (Telegram and/or Discord)
+
+You can enable one or both delivery methods in `config.yaml`.
+
+#### Telegram Bot
 
 1. Message [@BotFather](https://t.me/BotFather) on Telegram
 2. Send `/newbot` and follow prompts to create your bot
 3. Copy the bot token
+4. Message your new bot (send any message)
+5. Visit: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
+6. Find your `chat_id` in the response JSON
 
-### 3. Get your Chat ID
+#### Discord Webhook
 
-1. Message your new bot (send any message)
-2. Visit: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
-3. Find your `chat_id` in the response JSON
+1. Open your Discord server and go to **Server Settings → Integrations → Webhooks**
+2. Click **New Webhook**
+3. Name it (e.g., "AI Podcast"), select the target channel, and click **Copy Webhook URL**
 
-### 4. Configure .env
+### 3. Configure .env
 
 ```bash
 cp .env.example .env
-# Edit .env with your Telegram credentials
+# Edit .env with your delivery credentials
 # Optionally add ANTHROPIC_API_KEY for Claude script mode
 ```
 
-### 5. Configure sources and options
+Required variables depend on which delivery methods you enable:
+
+| Variable | Required when |
+|----------|---------------|
+| `TELEGRAM_BOT_TOKEN` | `telegram.enabled: true` |
+| `TELEGRAM_CHAT_ID` | `telegram.enabled: true` |
+| `DISCORD_WEBHOOK_URL` | `discord.enabled: true` |
+| `ANTHROPIC_API_KEY` | `podcast.script_mode: "ai"` |
+
+### 4. Configure sources and options
 
 Edit `config.yaml` to enable/disable sources, adjust max stories, change voice, switch script mode, etc.
 
@@ -119,19 +135,30 @@ Run `edge-tts --list-voices` for 400+ options.
 
 ## Delivery
 
-The podcast is delivered via Telegram Bot as two messages:
+Enable one or both in `config.yaml`:
+
+```yaml
+telegram:
+  enabled: true    # Telegram Bot API
+discord:
+  enabled: false   # Discord Webhook
+```
+
+Both deliver:
 1. **Audio file** — MP3 podcast ready to play
 2. **Story links** — Numbered list with titles, URLs, and source attribution
+
+Each has independent `send_audio` and `send_links` toggles.
 
 ## Project Structure
 
 ```
 main.py              Entry point and CLI
 config.yaml          All configuration (sources, voice, LLM, schedule)
-.env                 Secrets (Telegram token, optional Anthropic key)
+.env                 Secrets (Telegram token, Discord webhook, Anthropic key)
 sources/             News source fetchers (HN API, RSS, HTML scrapers, Reddit)
 pipeline/            Aggregation, script generation, audio generation
-delivery/            Telegram Bot API delivery
+delivery/            Telegram Bot + Discord Webhook delivery
 utils/               Deduplication, logging
 output/              Generated MP3s and logs (gitignored)
 ```
