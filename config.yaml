@@ -157,12 +157,12 @@ sources:
     max_stories: 2
 
 telegram:
-  enabled: true
+  enabled: false
   send_audio: true
   send_links: true
 
 discord:
-  enabled: false
+  enabled: true
   send_audio: true
   send_links: true
 
