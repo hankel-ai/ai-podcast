@@ -5,9 +5,11 @@ from sources.base import Story
 from sources.hackernews import fetch_hackernews
 from sources.techmeme import fetch_techmeme
 from sources.implicator import fetch_implicator
+from sources.claude_blog import fetch_claude_blog
 from sources.rss_generic import fetch_rss
 from sources.reddit import fetch_reddit
 from utils.dedup import deduplicate
+from utils.tracker import filter_already_used, record_used_stories
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,13 @@ FETCHERS = {
     "html_scraper": None,  # dispatched by source name
     "rss": fetch_rss,
     "reddit_json": fetch_reddit,
+    "claude_blog": fetch_claude_blog,
+}
+
+HTML_SCRAPERS = {
+    "techmeme": fetch_techmeme,
+    "implicator": fetch_implicator,
+    "claude_blog": fetch_claude_blog,
 }
 
 HTML_SCRAPERS = {
@@ -65,6 +74,9 @@ async def aggregate_news(config: dict) -> list[Story]:
     # Deduplicate
     all_stories = deduplicate(all_stories)
 
+    # Filter out articles already used this week
+    all_stories = filter_already_used(all_stories, days=7)
+
     # Sort: by score (if available) then by recency
     all_stories.sort(
         key=lambda s: (s.score or 0, s.published.timestamp() if s.published else 0),
@@ -75,6 +87,10 @@ async def aggregate_news(config: dict) -> list[Story]:
     all_stories = all_stories[:max_stories]
     logger.info(f"Aggregated {len(all_stories)} stories after dedup and cap")
 
+    # Record these stories as used for future runs
+    if all_stories:
+        record_used_stories(all_stories)
+
     return all_stories
 
 
@@ -83,6 +99,7 @@ def _friendly_name(source_key: str) -> str:
         "hackernews": "Hacker News",
         "techmeme": "Techmeme",
         "implicator": "implicator.ai",
+        "claude_blog": "Claude Blog",
         "ars_ai": "Ars Technica",
         "the_batch": "The Batch",
         "mit_tech_review_ai": "MIT Technology Review",

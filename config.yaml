@@ -121,10 +121,15 @@ sources:
     max_stories: 2
 
   anthropic_news:
-    enabled: false  # No official RSS feed available
+    enabled: false # No official RSS feed available
     type: "rss"
     url: "https://www.anthropic.com/rss.xml"
     max_stories: 2
+
+  claude_blog:
+    enabled: true
+    type: "claude_blog"
+    max_stories: 3
 
   google_ai_blog:
     enabled: true
