@@ -21,6 +21,8 @@ from pipeline.audio import generate_audio
 from delivery.telegram import send_podcast, send_failure_notification
 from delivery.discord import send_podcast_discord, send_failure_notification_discord
 from utils.logging_setup import setup_logging
+from utils.tracker import save_recap
+from utils.health import print_health_report
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,14 @@ async def run(args):
         list_sources(config)
         return
 
+    if args.health:
+        print_health_report()
+        return
+
+    # CLI --profile overrides config
+    if args.profile:
+        config.setdefault("podcast", {})["profile"] = args.profile
+
     min_stories = config.get("podcast", {}).get("min_stories", 3)
 
     try:
@@ -73,6 +83,9 @@ async def run(args):
         # 2. Generate script
         script = generate_script(stories, config)
         logger.info(f"Script generated: {len(stories)} stories, {len(script)} chars")
+
+        # Record episode recap for story continuity in future episodes
+        save_recap(stories)
 
         if args.dry_run:
             print("\n" + "=" * 60)
@@ -119,6 +132,8 @@ def main():
     parser = argparse.ArgumentParser(description="AI Daily Briefing - News Podcast Generator")
     parser.add_argument("--dry-run", action="store_true", help="Generate script only, no audio or Telegram")
     parser.add_argument("--sources", action="store_true", help="List configured sources")
+    parser.add_argument("--health", action="store_true", help="Show source health report")
+    parser.add_argument("--profile", choices=["brief", "standard", "deep"], help="Episode length profile (overrides config)")
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
     parser.add_argument("--config", default="config.yaml", help="Path to config file")
     args = parser.parse_args()

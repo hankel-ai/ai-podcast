@@ -6,6 +6,8 @@ from datetime import datetime
 
 import edge_tts
 
+from pipeline.audio_mixer import apply_production
+
 logger = logging.getLogger(__name__)
 
 
@@ -24,7 +26,11 @@ async def generate_audio(script: str, config: dict) -> str:
         await _generate_single_voice_audio(script, config, output_path)
 
     size_mb = os.path.getsize(output_path) / (1024 * 1024)
-    logger.info(f"Audio saved: {output_path} ({size_mb:.1f} MB)")
+    logger.info(f"Raw audio saved: {output_path} ({size_mb:.1f} MB)")
+
+    # Post-processing: intro, outro, bed music
+    output_path = apply_production(output_path, config)
+
     return output_path
 
 

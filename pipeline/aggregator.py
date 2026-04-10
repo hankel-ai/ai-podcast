@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 
 from sources.base import Story
 from sources.hackernews import fetch_hackernews
@@ -11,6 +12,8 @@ from sources.reddit import fetch_reddit
 from utils.dedup import deduplicate
 from utils.tracker import filter_already_used, record_used_stories
 from utils.content_scraper import enrich_stories
+from utils.health import record_fetch
+from pipeline.scriptwriter import get_profile
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +39,9 @@ HTML_SCRAPERS = {
 
 async def aggregate_news(config: dict) -> list[Story]:
     sources = config.get("sources", {})
-    max_stories = config.get("podcast", {}).get("max_stories", 12)
+    profile = get_profile(config)
+    config_max = config.get("podcast", {}).get("max_stories", 12)
+    max_stories = min(config_max, profile["max_stories"])
 
     tasks = []
     task_names = []
@@ -62,14 +67,28 @@ async def aggregate_news(config: dict) -> list[Story]:
         tasks.append(fetcher(src_config))
         task_names.append(name)
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    # Wrap each task with timing
+    async def _timed_fetch(name, coro):
+        t0 = time.monotonic()
+        try:
+            result = await coro
+            elapsed = (time.monotonic() - t0) * 1000
+            return name, result, elapsed, None
+        except Exception as e:
+            elapsed = (time.monotonic() - t0) * 1000
+            return name, e, elapsed, str(e)
+
+    timed_tasks = [_timed_fetch(n, t) for n, t in zip(task_names, tasks)]
+    timed_results = await asyncio.gather(*timed_tasks)
 
     all_stories = []
-    for name, result in zip(task_names, results):
+    for name, result, elapsed_ms, error in timed_results:
         if isinstance(result, Exception):
             logger.error(f"Source '{name}' failed: {result}")
+            record_fetch(name, ok=False, story_count=0, latency_ms=elapsed_ms, error=error or "")
             continue
-        logger.info(f"Source '{name}': {len(result)} stories")
+        logger.info(f"Source '{name}': {len(result)} stories ({elapsed_ms:.0f}ms)")
+        record_fetch(name, ok=True, story_count=len(result), latency_ms=elapsed_ms)
         all_stories.extend(result)
 
     # Deduplicate

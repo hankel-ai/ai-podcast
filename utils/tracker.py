@@ -11,6 +11,7 @@ from .dedup import normalize_url
 logger = logging.getLogger(__name__)
 
 HISTORY_FILE = Path(__file__).parent.parent / "output" / "article_history.json"
+RECAPS_FILE = Path(__file__).parent.parent / "output" / "episode_recaps.json"
 WEEK_IN_DAYS = 7
 
 
@@ -117,3 +118,61 @@ def record_used_stories(stories: list):
     add_to_history(history, urls)
     save_history(history)
     logger.info(f"Recorded {len(urls)} stories to history")
+
+
+# --- Episode recap tracking (for story continuity) ---
+
+def load_recaps() -> list[dict]:
+    """Load episode recaps from file. Each recap: {date, stories: [{title, source}]}."""
+    if not RECAPS_FILE.exists():
+        return []
+    try:
+        with open(RECAPS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"Failed to load episode recaps: {e}")
+        return []
+
+
+def save_recap(stories: list):
+    """Save a recap of today's episode (date + story titles/sources)."""
+    recaps = load_recaps()
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    day_name = datetime.now().strftime("%A")
+
+    recap = {
+        "date": today,
+        "day": day_name,
+        "stories": [
+            {"title": s.title, "source": s.source_name}
+            for s in stories if hasattr(s, "title")
+        ],
+    }
+
+    # Replace if we already have a recap for today, otherwise append
+    recaps = [r for r in recaps if r.get("date") != today]
+    recaps.append(recap)
+
+    # Keep only the last 7 days
+    cutoff = (datetime.now() - timedelta(days=WEEK_IN_DAYS)).strftime("%Y-%m-%d")
+    recaps = [r for r in recaps if r.get("date", "") >= cutoff]
+
+    try:
+        RECAPS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(RECAPS_FILE, "w", encoding="utf-8") as f:
+            json.dump(recaps, f, indent=2)
+        logger.info(f"Saved episode recap: {len(recap['stories'])} stories for {today}")
+    except Exception as e:
+        logger.error(f"Failed to save episode recap: {e}")
+
+
+def get_recent_recaps(days: int = 3) -> list[dict]:
+    """Get recaps from the last N days (excluding today) for continuity context."""
+    recaps = load_recaps()
+    today = datetime.now().strftime("%Y-%m-%d")
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    return [
+        r for r in recaps
+        if r.get("date", "") >= cutoff and r.get("date") != today
+    ]

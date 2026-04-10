@@ -3,12 +3,23 @@ podcast:
   max_stories: 15
   min_stories: 3
   script_mode: "ollama"  # "ollama" (local), "ai" (Claude Haiku), or "template" (no LLM)
+  profile: "standard"    # "brief" (2-3 min), "standard" (5-7 min), or "deep" (12-15 min)
   conversation: true     # true = dual-host conversation format, false = single narrator
   scrape_content: true   # true = fetch article body text for richer LLM scripts
   voice: "en-US-AndrewMultilingualNeural"       # Host voice (or sole narrator)
   cohost_voice: "en-US-EmmaMultilingualNeural"   # Co-host voice (conversation mode only)
   voice_rate: "+5%"
   output_dir: "./output"
+
+  # Production polish: intro/outro jingles, bed music
+  # Requires ffmpeg on PATH. Drop custom MP3s in assets/ or run: python generate_assets.py
+  production:
+    enabled: true              # Set false to skip all mixing
+    assets_dir: "./assets"     # Directory containing intro.mp3, outro.mp3, bed_music.mp3
+    bitrate: "64k"             # Output MP3 bitrate (64k keeps files under Discord 8MB limit)
+    intro_volume_db: 0         # Volume adjustment for intro (0 = unchanged)
+    outro_volume_db: 0         # Volume adjustment for outro
+    bed_music_volume_db: -18   # Bed music volume (negative = quieter, -18 is subtle)
 
   # Available voices (all neural, high quality):
   # en-US-AndrewMultilingualNeural  - Deep, authoritative male (default host)

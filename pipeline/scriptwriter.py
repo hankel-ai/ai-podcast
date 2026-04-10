@@ -4,8 +4,48 @@ import re
 from datetime import datetime
 
 from sources.base import Story
+from utils.tracker import get_recent_recaps
 
 logger = logging.getLogger(__name__)
+
+# Episode length profiles
+PROFILES = {
+    "brief": {
+        "max_stories": 5,
+        "solo_words": "300-500",
+        "solo_minutes": "2-3",
+        "convo_words": "500-700",
+        "convo_minutes": "3-4",
+        "depth": "Give each story one or two sentences — headline and why it matters. Keep it punchy.",
+    },
+    "standard": {
+        "max_stories": 15,
+        "solo_words": "800-1000",
+        "solo_minutes": "5-7",
+        "convo_words": "1000-1400",
+        "convo_minutes": "7-10",
+        "depth": "Cover each story with a natural summary and brief commentary on why it matters.",
+    },
+    "deep": {
+        "max_stories": 8,
+        "solo_words": "1800-2500",
+        "solo_minutes": "12-15",
+        "convo_words": "2200-3000",
+        "convo_minutes": "15-20",
+        "depth": (
+            "Go deep on each story — provide detailed analysis, implications, "
+            "who's affected, and what to watch next. Spend 2-3 paragraphs per story. "
+            "Quality over quantity."
+        ),
+    },
+}
+
+
+def get_profile(config: dict) -> dict:
+    """Return the active profile dict, defaulting to 'standard'."""
+    name = config.get("podcast", {}).get("profile", "standard")
+    return PROFILES.get(name, PROFILES["standard"])
+
 
 TRANSITIONS = [
     "Next up.",
@@ -130,6 +170,24 @@ def _generate_template_conversation(stories: list[Story], title: str, date_str: 
     return _cleanup_for_tts(script)
 
 
+def _format_recent_episodes() -> str:
+    """Format recent episode recaps as context for the LLM prompt."""
+    recaps = get_recent_recaps(days=3)
+    if not recaps:
+        return ""
+
+    lines = ["Recent episodes (reference these when today's stories connect to previous coverage):"]
+    for recap in recaps:
+        day = recap.get("day", "")
+        date = recap.get("date", "")
+        stories = recap.get("stories", [])
+        titles = [f"  - [{s['source']}] {s['title']}" for s in stories[:8]]
+        lines.append(f"\n{day} ({date}):")
+        lines.extend(titles)
+
+    return "\n".join(lines)
+
+
 def _format_stories_for_prompt(stories: list[Story]) -> str:
     story_list = []
     for i, story in enumerate(stories, 1):
@@ -147,21 +205,33 @@ def _format_stories_for_prompt(stories: list[Story]) -> str:
 def _build_prompt(stories: list[Story], config: dict) -> str:
     title = config.get("podcast", {}).get("title", "AI Daily Briefing")
     date_str = datetime.now().strftime("%A, %B %d, %Y")
+    profile = get_profile(config)
     stories_text = _format_stories_for_prompt(stories)
+    recent_context = _format_recent_episodes()
+
+    recent_section = ""
+    recent_instruction = ""
+    if recent_context:
+        recent_section = f"\n{recent_context}\n"
+        recent_instruction = (
+            "- If today's story continues or relates to something from a recent episode, "
+            "briefly reference it (e.g. \"Following up on Monday's story about...\", "
+            "\"As we mentioned yesterday...\"). Keep callbacks natural and brief — don't force them.\n"
+        )
 
     return f"""Write a podcast script for "{title}" dated {date_str}.
 
 Here are today's AI news stories:
 
 {stories_text}
-
+{recent_section}
 Requirements:
-- Write a 5-7 minute spoken script (about 800-1000 words)
+- Write a {profile['solo_minutes']} minute spoken script (about {profile['solo_words']} words)
 - Start with a brief, energetic greeting and date
-- Cover each story with a natural summary and brief commentary on why it matters
+- {profile['depth']}
 - Use the article excerpts to provide specific details, numbers, and quotes — don't just paraphrase headlines
 - Draw connections between related stories when possible
-- Especially highlight anything about agentic coding, new model releases, or open-source AI
+{recent_instruction}- Especially highlight anything about agentic coding, new model releases, or open-source AI
 - Use conversational tone — this is spoken audio, not written text
 - End with a brief sign-off mentioning that links are in the message below
 - Do NOT include any stage directions, speaker labels, or non-spoken text
@@ -172,7 +242,19 @@ Requirements:
 def _build_conversation_prompt(stories: list[Story], config: dict) -> str:
     title = config.get("podcast", {}).get("title", "AI Daily Briefing")
     date_str = datetime.now().strftime("%A, %B %d, %Y")
+    profile = get_profile(config)
     stories_text = _format_stories_for_prompt(stories)
+    recent_context = _format_recent_episodes()
+
+    recent_section = ""
+    recent_instruction = ""
+    if recent_context:
+        recent_section = f"\n{recent_context}\n"
+        recent_instruction = (
+            "- If today's story continues or relates to something from a recent episode, "
+            "have the hosts reference it naturally (e.g. HOST: \"This ties back to that OpenAI story from Monday...\" "
+            "or COHOST: \"Didn't we just talk about this yesterday?\"). Keep callbacks brief — don't force them.\n"
+        )
 
     return f"""Write a two-host podcast script for "{title}" dated {date_str}.
 
@@ -183,16 +265,16 @@ The hosts are:
 Here are today's AI news stories:
 
 {stories_text}
-
+{recent_section}
 Requirements:
-- Write a 7-10 minute conversational script (about 1000-1400 words)
+- Write a {profile['convo_minutes']} minute conversational script (about {profile['convo_words']} words)
 - Format each line as either HOST: or COHOST: followed by their dialogue
 - HOST opens with a greeting and date, COHOST responds naturally
-- For each story: HOST introduces it, COHOST reacts or adds insight, they briefly discuss
+- {profile['depth']}
 - Use the article excerpts to provide specific details, numbers, and quotes — not just headline summaries
 - The conversation should feel natural — interruptions, agreement, surprise, humor are all good
 - Draw connections between related stories when possible
-- Especially highlight anything about agentic coding, new model releases, or open-source AI
+{recent_instruction}- Especially highlight anything about agentic coding, new model releases, or open-source AI
 - HOST wraps up with a sign-off, COHOST adds a final thought
 - Mention that links are in the message below
 - Do NOT include stage directions like (laughs), [pause], etc.
@@ -264,9 +346,12 @@ def _generate_ai_script(stories: list[Story], config: dict, conversation: bool =
 
     prompt = _build_conversation_prompt(stories, config) if conversation else _build_prompt(stories, config)
 
+    profile_name = config.get("podcast", {}).get("profile", "standard")
+    max_tokens = 5000 if profile_name == "deep" else 3000
+
     message = client.messages.create(
         model=model,
-        max_tokens=3000,
+        max_tokens=max_tokens,
         messages=[{"role": "user", "content": prompt}],
     )
 

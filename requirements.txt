@@ -6,3 +6,4 @@ pyyaml>=6.0
 python-dotenv>=1.0.0
 anthropic[vertex]>=0.40.0
 trafilatura>=1.6.0
+pydub>=0.25.0
