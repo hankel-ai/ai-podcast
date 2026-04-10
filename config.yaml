@@ -3,17 +3,20 @@ podcast:
   max_stories: 15
   min_stories: 3
   script_mode: "ollama"  # "ollama" (local), "ai" (Claude Haiku), or "template" (no LLM)
-  voice: "en-US-AndrewMultilingualNeural"
+  conversation: true     # true = dual-host conversation format, false = single narrator
+  scrape_content: true   # true = fetch article body text for richer LLM scripts
+  voice: "en-US-AndrewMultilingualNeural"       # Host voice (or sole narrator)
+  cohost_voice: "en-US-EmmaMultilingualNeural"   # Co-host voice (conversation mode only)
   voice_rate: "+5%"
   output_dir: "./output"
 
   # Available voices (all neural, high quality):
-  # en-US-AndrewMultilingualNeural  - Deep, authoritative male (default, best for news)
+  # en-US-AndrewMultilingualNeural  - Deep, authoritative male (default host)
+  # en-US-EmmaMultilingualNeural    - Polished female, great diction (default cohost)
   # en-US-AriaNeural                - Warm, professional female
   # en-US-GuyNeural                 - Classic male news reader
   # en-US-JennyNeural               - Friendly, clear female
   # en-US-BrianMultilingualNeural   - Confident male, slightly younger
-  # en-US-EmmaMultilingualNeural    - Polished female, great diction
   # en-GB-RyanNeural                - British male, BBC-style
   # en-GB-SoniaNeural               - British female, polished
   # en-AU-WilliamNeural             - Australian male

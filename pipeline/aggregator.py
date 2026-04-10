@@ -10,6 +10,7 @@ from sources.rss_generic import fetch_rss
 from sources.reddit import fetch_reddit
 from utils.dedup import deduplicate
 from utils.tracker import filter_already_used, record_used_stories
+from utils.content_scraper import enrich_stories
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,10 @@ async def aggregate_news(config: dict) -> list[Story]:
     # Cap at max
     all_stories = all_stories[:max_stories]
     logger.info(f"Aggregated {len(all_stories)} stories after dedup and cap")
+
+    # Scrape full article content for richer script generation
+    if config.get("podcast", {}).get("scrape_content", True):
+        await enrich_stories(all_stories)
 
     # Record these stories as used for future runs
     if all_stories:

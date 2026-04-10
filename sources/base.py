@@ -9,6 +9,7 @@ class Story:
     url: str
     source_name: str
     summary: str = ""
+    article_content: str = ""
     score: Optional[int] = None
     published: Optional[datetime] = None
     keywords_matched: list[str] = field(default_factory=list)
